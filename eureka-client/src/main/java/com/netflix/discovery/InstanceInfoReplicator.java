@@ -97,7 +97,7 @@ class InstanceInfoReplicator implements Runnable {
                             logger.debug("Canceling the latest scheduled update, it will be rescheduled at the end of on demand update");
                             latestPeriodic.cancel(false);
                         }
-    
+                        // 实例信息刷新和注册
                         InstanceInfoReplicator.this.run();
                     }
                 });
@@ -114,16 +114,21 @@ class InstanceInfoReplicator implements Runnable {
 
     public void run() {
         try {
+        	// 定时刷新实例信息
             discoveryClient.refreshInstanceInfo();
-
+            // 判断实例信息是否发生改变
+            // isInstanceInfoDirty默认为false，实例信息发生改变时会被设为true
+            // 被设为ture，则dirtyTimestamp不为null
             Long dirtyTimestamp = instanceInfo.isDirtyWithTime();
             if (dirtyTimestamp != null) {
+            	// 向EurekaServer注册
                 discoveryClient.register();
                 instanceInfo.unsetIsDirty(dirtyTimestamp);
             }
         } catch (Throwable t) {
             logger.warn("There was a problem with the instance info replicator", t);
         } finally {
+        	// 定时执行本段逻辑
             Future next = scheduler.schedule(this, replicationIntervalSeconds, TimeUnit.SECONDS);
             scheduledPeriodicRef.set(next);
         }
