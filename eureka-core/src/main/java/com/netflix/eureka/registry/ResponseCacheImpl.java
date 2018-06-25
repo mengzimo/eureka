@@ -165,7 +165,7 @@ public class ResponseCacheImpl implements ResponseCache {
             logger.warn("Cannot register the JMX monitor for the InstanceRegistry", e);
         }
     }
-
+    // 通过定时任务把readWriteCacheMap的数据更新到readOnlyCacheMap
     private TimerTask getCacheUpdateTask() {
         return new TimerTask() {
             @Override
@@ -227,6 +227,7 @@ public class ResponseCacheImpl implements ResponseCache {
      *         applications.
      */
     public byte[] getGZIP(Key key) {
+    	// shouldUseReadOnlyResponseCache默认为true，允许使用只读缓存
         Value payload = getValue(key, shouldUseReadOnlyResponseCache);
         if (payload == null) {
             return null;
@@ -344,7 +345,11 @@ public class ResponseCacheImpl implements ResponseCache {
     Value getValue(final Key key, boolean useReadOnlyCache) {
         Value payload = null;
         try {
+        	// 默认为true，允许使用只读缓存
             if (useReadOnlyCache) {
+            	// 先从readOnlyCacheMap读取
+            	// 若读不到，则从readWriteCacheMap读取，并将结果存入readOnlyCacheMap
+            	// 
                 final Value currentPayload = readOnlyCacheMap.get(key);
                 if (currentPayload != null) {
                     payload = currentPayload;
@@ -353,6 +358,7 @@ public class ResponseCacheImpl implements ResponseCache {
                     readOnlyCacheMap.put(key, payload);
                 }
             } else {
+            	// 不允许使用只读缓存，读取readWriteCacheMap
                 payload = readWriteCacheMap.get(key);
             }
         } catch (Throwable t) {

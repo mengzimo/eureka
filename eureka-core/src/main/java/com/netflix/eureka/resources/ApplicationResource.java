@@ -141,10 +141,12 @@ public class ApplicationResource {
      */
     @POST
     @Consumes({"application/json", "application/xml"})
+    // 注册实例到EurekaServer
     public Response addInstance(InstanceInfo info,
                                 @HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {
         logger.debug("Registering instance {} (replication={})", info.getId(), isReplication);
         // validate that the instanceinfo contains all the necessary required fields
+        // 参数校验
         if (isBlank(info.getId())) {
             return Response.status(400).entity("Missing instanceId").build();
         } else if (isBlank(info.getHostName())) {
@@ -181,7 +183,8 @@ public class ApplicationResource {
                 }
             }
         }
-
+        // 进行注册并判断是否向其他EurekaServer节点进行注册传播
+        // 不过目测isReplication在EurekaClient端发起请求的时候没找到请求头部有这个参数
         registry.register(info, "true".equals(isReplication));
         return Response.status(204).build();  // 204 to be backwards compatible
     }

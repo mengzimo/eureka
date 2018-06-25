@@ -403,11 +403,15 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      */
     @Override
     public void register(final InstanceInfo info, final boolean isReplication) {
+    	// 默认租约有效时间为90秒
         int leaseDuration = Lease.DEFAULT_DURATION_IN_SECS;
+        // 自己设置的租约有效时间
         if (info.getLeaseInfo() != null && info.getLeaseInfo().getDurationInSecs() > 0) {
             leaseDuration = info.getLeaseInfo().getDurationInSecs();
         }
+        // 调用父类方法进行注册
         super.register(info, leaseDuration, isReplication);
+        // 注册信息复制到其他EurekaServer节点
         replicateToPeers(Action.Register, info.getAppName(), info.getId(), info, null, isReplication);
     }
 
@@ -418,7 +422,10 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
      * java.lang.String, long, boolean)
      */
     public boolean renew(final String appName, final String id, final boolean isReplication) {
+    	// 续约
         if (super.renew(appName, id, isReplication)) {
+        	// 如果是续租请求则进行续租并向其他EurekaServer节点同步续约信息
+        	// 如果是同步信息请求则直接返回，不向其他EurekaServer节点同步续约信息
             replicateToPeers(Action.Heartbeat, appName, id, null, null, isReplication);
             return true;
         }
@@ -624,15 +631,19 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                 numberOfReplicationsLastMin.increment();
             }
             // If it is a replication already, do not replicate again as this will create a poison replication
+            // 如果没有其他节点或已经向其他节点同步过则不再进行信息同步
+            // 目测isReplication为ture的时候代表已经同步不需要再次同步?
             if (peerEurekaNodes == Collections.EMPTY_LIST || isReplication) {
                 return;
             }
-
+            // 循环EurekaServer的每个节点进行复制
             for (final PeerEurekaNode node : peerEurekaNodes.getPeerEurekaNodes()) {
                 // If the url represents this host, do not replicate to yourself.
                 if (peerEurekaNodes.isThisMyUrl(node.getServiceUrl())) {
                     continue;
                 }
+                // Action为Register
+                // 具体同步过程之后文章会有详细解析
                 replicateInstanceActionsToPeers(action, appName, id, info, newStatus, node);
             }
         } finally {
@@ -660,6 +671,7 @@ public class PeerAwareInstanceRegistryImpl extends AbstractInstanceRegistry impl
                     infoFromRegistry = getInstanceByAppAndId(appName, id, false);
                     node.heartbeat(appName, id, infoFromRegistry, overriddenStatus, false);
                     break;
+                // Action为Register
                 case Register:
                     node.register(info);
                     break;
