@@ -127,6 +127,7 @@ public class ResponseCacheImpl implements ResponseCache {
         this.registry = registry;
 
         long responseCacheUpdateIntervalMs = serverConfig.getResponseCacheUpdateIntervalMs();
+        // readWriteCacheMap的初始化
         this.readWriteCacheMap =
                 CacheBuilder.newBuilder().initialCapacity(1000)
                         .expireAfterWrite(serverConfig.getResponseCacheAutoExpirationInSeconds(), TimeUnit.SECONDS)
@@ -165,6 +166,7 @@ public class ResponseCacheImpl implements ResponseCache {
             logger.warn("Cannot register the JMX monitor for the InstanceRegistry", e);
         }
     }
+    // 定时刷新只读缓存，默认30秒
     // 通过定时任务把readWriteCacheMap的数据更新到readOnlyCacheMap
     private TimerTask getCacheUpdateTask() {
         return new TimerTask() {
@@ -349,7 +351,11 @@ public class ResponseCacheImpl implements ResponseCache {
             if (useReadOnlyCache) {
             	// 先从readOnlyCacheMap读取
             	// 若读不到，则从readWriteCacheMap读取，并将结果存入readOnlyCacheMap
-            	// 
+            	// 缓存设计成了两级，请求进来的时候先读readOnlyCacheMap，读不到再从readWriteCacheMap读取
+            	// readWriteCacheMap里再读不到，则从registry里读
+            	// readOnlyCacheMap是一个ConcurrentMap
+            	// readWriteCacheMap是一个LoadingCache
+            	// 不是很理解为什么要设置这两级缓存？
                 final Value currentPayload = readOnlyCacheMap.get(key);
                 if (currentPayload != null) {
                     payload = currentPayload;
