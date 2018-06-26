@@ -279,15 +279,19 @@ public class InstanceResource {
 	 * @return response indicating whether the operation was a success or
 	 *         failure.
 	 */
+	// 接收EurekaClient端下线请求
 	@DELETE
 	public Response cancelLease(@HeaderParam(PeerEurekaNode.HEADER_REPLICATION) String isReplication) {
 		try {
+			// 调用下线方法，isReplication字段之前注释有说明
 			boolean isSuccess = registry.cancel(app.getName(), id, "true".equals(isReplication));
 
+			// 下线成功
 			if (isSuccess) {
 				logger.debug("Found (Cancel): {} - {}", app.getName(), id);
 				return Response.ok().build();
 			} else {
+				// 没找到实例，返回404
 				logger.info("Not Found (Cancel): {} - {}", app.getName(), id);
 				return Response.status(Status.NOT_FOUND).build();
 			}

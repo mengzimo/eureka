@@ -895,6 +895,8 @@ public class DiscoveryClient implements EurekaClient {
      * Shuts down Eureka Client. Also sends a deregistration request to the
      * eureka server.
      */
+    // 可通过执行http://localhost:8080/shutdown对EurekaClient进行下线
+    // 下线后会识别@PreDestroy这个注解，调用到shutdown()这个方法
     @PreDestroy
     @Override
     public synchronized void shutdown() {
@@ -904,14 +906,20 @@ public class DiscoveryClient implements EurekaClient {
             if (statusChangeListener != null && applicationInfoManager != null) {
                 applicationInfoManager.unregisterStatusChangeListener(statusChangeListener.getId());
             }
-
+            // 关闭各种定时任务
+            // 关闭刷新实例信息/注册的定时任务
+            // 关闭续约(心跳)的定时任务
+            // 关闭获取注册信息的定时任务
             cancelScheduledTasks();
 
             // If APPINFO was registered
             if (applicationInfoManager != null
                     && clientConfig.shouldRegisterWithEureka()
                     && clientConfig.shouldUnregisterOnShutdown()) {
+            	// 更改实例状态，使实例不再接收流量
                 applicationInfoManager.setInstanceStatus(InstanceStatus.DOWN);
+                // 向EurekaServer端发送下线请求
+                // 是个void方法
                 unregister();
             }
 
@@ -934,6 +942,8 @@ public class DiscoveryClient implements EurekaClient {
         if(eurekaTransport != null && eurekaTransport.registrationClient != null) {
             try {
                 logger.info("Unregistering ...");
+                // 向EurekaServer端发送下线请求，参数为实例集合名称+实例id
+                // 具体调用到eureka-core包下InstanceResource-cancelLease()方法
                 EurekaHttpResponse<Void> httpResponse = eurekaTransport.registrationClient.cancel(instanceInfo.getAppName(), instanceInfo.getId());
                 logger.info(PREFIX + "{} - deregister  status: {}", appPathIdentifier, httpResponse.getStatusCode());
             } catch (Exception e) {
