@@ -193,6 +193,8 @@ public class ApplicationsResource {
      * @return response containing the delta information of the
      *         {@link AbstractInstanceRegistry}.
      */
+    // 接收EurekaClient端发送的差别获取请求
+    // 具体实现上基本和全量获取一致
     @Path("delta")
     @GET
     public Response getContainerDifferential(

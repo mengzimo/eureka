@@ -104,9 +104,12 @@ public class Application {
      *            the instance info object to be added.
      */
     public void addInstance(InstanceInfo i) {
+    	// 实例信息添加到instancesMap
         instancesMap.put(i.getId(), i);
         synchronized (instances) {
+        	// 移除集合重原有的实例信息
             instances.remove(i);
+            // 把实例信息重新添加到集合中
             instances.add(i);
             isDirty = true;
         }
@@ -253,8 +256,10 @@ public class Application {
     }
 
     private void removeInstance(InstanceInfo i, boolean markAsDirty) {
+    	// 在instancesMap移除实例信息
         instancesMap.remove(i.getId());
         synchronized (instances) {
+        	// 在集合中移除实例信息
             instances.remove(i);
             if (markAsDirty) {
                 isDirty = true;
